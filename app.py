@@ -136,6 +136,32 @@ with st.sidebar:
 if option == "🖼️ Phát hiện từ ảnh":
     st.header("📷 Phát hiện động vật từ ảnh")
     
+    # Thanh cài đặt
+    with st.expander("⚙️ Cài đặt phát hiện", expanded=True):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            confidence_threshold = st.slider(
+                "🎯 Confidence Threshold",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.25,
+                step=0.05,
+                help="Ngưỡng độ tin cậy tối thiểu (0-1). Giá trị càng cao, kết quả càng chắc chắn nhưng có thể bỏ sót."
+            )
+        
+        with col2:
+            iou_threshold = st.slider(
+                "📦 IoU Threshold",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.45,
+                step=0.05,
+                help="Ngưỡng IoU cho NMS (Non-Maximum Suppression). Giá trị càng thấp, loại bỏ box trùng lặp càng nhiều."
+            )
+        
+        st.info(f"**Cài đặt hiện tại:** Confidence ≥ {confidence_threshold:.2f} | IoU ≤ {iou_threshold:.2f}")
+    
     col1, col2 = st.columns([1, 1])
     
     with col1:
@@ -169,9 +195,9 @@ if option == "🖼️ Phát hiện từ ảnh":
                     st.markdown("**Ảnh gốc**")
                     st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), use_container_width=True)
                 
-                # Detect
+                # Detect với confidence và iou
                 with st.spinner(f"🔍 Đang phát hiện vật thể trong {upload.name}..."):
-                    annotated, class_count = detect_image(img)
+                    annotated, class_count = detect_image(img, conf=confidence_threshold, iou=iou_threshold)
                 
                 with col_right:
                     st.markdown("**Kết quả phát hiện**")
@@ -193,6 +219,7 @@ if option == "🖼️ Phát hiện từ ảnh":
                         st.info(f"📊 Tổng số đối tượng phát hiện: {class_count}")
                 else:
                     st.warning("⚠️ Không phát hiện được vật thể nào trong ảnh")
+                    st.info("💡 Thử giảm Confidence Threshold để phát hiện nhiều hơn")
                 
                 st.markdown("---")
                 
