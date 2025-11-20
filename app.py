@@ -124,7 +124,7 @@ with st.sidebar:
     with st.expander("👥 Thành viên nhóm", expanded=False):
         st.markdown("""
         <div style='color: white;'>
-        • Thành viên 1<br>
+        • Nguyễn Minh Phúc 2331540232<br>
         • Thành viên 2<br>
         • Thành viên 3<br>
         • Thành viên 4
