@@ -4,6 +4,16 @@ from utils.video import process_video_with_preview, detect_video_realtime
 import os
 import glob
 
+# FORCE RELOAD - Thêm đoạn này
+import importlib
+import sys
+if 'utils.detect' in sys.modules:
+    importlib.reload(sys.modules['utils.detect'])
+    from utils.detect import detect_image
+if 'utils.video' in sys.modules:
+    importlib.reload(sys.modules['utils.video'])
+    from utils.video import process_video_with_preview, detect_video_realtime
+
 st.set_page_config(
     page_title="Phát hiện vật thể - Nhóm 12", 
     layout="wide", 

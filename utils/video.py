@@ -1,8 +1,6 @@
 import cv2
 from ultralytics import YOLO
 import streamlit as st
-import tempfile
-import os
 
 model = YOLO("models/best.pt")
 
@@ -12,7 +10,6 @@ def detect_video(video_path, output_path="output.mp4", conf=0.25, iou=0.45):
     """
     cap = cv2.VideoCapture(video_path)
     
-    # Đọc thông tin video
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -92,7 +89,7 @@ def detect_video_realtime(video_path, conf=0.25, iou=0.45):
         
         frame_count += 1
         
-        # Detect
+        # Detect với conf và iou
         results = model(frame, conf=conf, iou=iou)[0]
         annotated = results.plot()
         
