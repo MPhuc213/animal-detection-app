@@ -5,24 +5,16 @@ model = YOLO("models/best.pt")
 
 def detect_image(image):
     """
-    Phát hiện động vật trong ảnh
-    
-    Args:
-        image: numpy array của ảnh (BGR format)
-    
-    Returns:
-        annotated: ảnh đã được vẽ bounding box
-        class_count: dictionary đếm số lượng từng loại động vật
+    Phát hiện vật thể trong ảnh
     """
     results = model(image)[0]
     annotated = results.plot()
     
     class_count = {}
     
-    # Đếm số lượng theo TÊN class
+    # Đếm số lượng object TRONG ẢNH NÀY (không phải tổng)
     for box in results.boxes:
         cls_id = int(box.cls.item())
-        # Lấy tên class từ model
         class_name = model.names[cls_id]
         class_count[class_name] = class_count.get(class_name, 0) + 1
     
