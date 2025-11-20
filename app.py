@@ -124,7 +124,7 @@ with st.sidebar:
     with st.expander("👥 Thành viên nhóm", expanded=False):
         st.markdown("""
         <div style='color: white;'>
-        • Nguyễn Minh Phúc 2331540232<br>
+        • Thành viên 1<br>
         • Thành viên 2<br>
         • Thành viên 3<br>
         • Thành viên 4
@@ -229,7 +229,8 @@ if option == "🖼️ Phát hiện từ ảnh":
 elif option == "🎥 Phát hiện từ video":
     st.header("🎥 Phát hiện động vật từ video")
     
-    col1, col2 = st.columns([1, 1])
+    # Tùy chọn xử lý
+    col1, col2 = st.columns([2, 1])
     
     with col1:
         st.subheader("📹 Upload video")
@@ -240,11 +241,14 @@ elif option == "🎥 Phát hiện từ video":
             help="Hỗ trợ định dạng: MP4, AVI, MOV"
         )
     
+    with col2:
+        st.subheader("⚙️ Cài đặt")
+        show_preview = st.checkbox("Hiển thị preview khi xử lý", value=True, help="Hiển thị một số frame mẫu trong quá trình xử lý")
+        save_output = st.checkbox("Lưu video kết quả", value=True, help="Lưu video đã detect để tải xuống")
+    
     if upload_files:
         for idx, upload in enumerate(upload_files):
             st.markdown(f"### 🎬 Video {idx + 1}: {upload.name}")
-            
-            col_left, col_right = st.columns(2)
             
             try:
                 # Lưu video tạm
@@ -252,63 +256,104 @@ elif option == "🎥 Phát hiện từ video":
                 with open(temp_input, "wb") as f:
                     f.write(upload.read())
                 
-                with col_left:
-                    st.markdown("**Video gốc**")
+                # Hiển thị video gốc
+                with st.expander("📹 Xem video gốc", expanded=False):
                     st.video(temp_input)
                 
-                # Detect
-                with st.spinner(f"🔍 Đang phát hiện động vật trong {upload.name}... (có thể mất vài phút)"):
-                    output_path, class_count = detect_video(temp_input)
+                # Phát hiện
+                st.markdown("#### 🔍 Đang xử lý video...")
                 
-                with col_right:
-                    st.markdown("**Kết quả phát hiện**")
-                    if os.path.exists(output_path):
-                        st.video(output_path)
-                    else:
-                        st.error("❌ Không tìm thấy video kết quả")
+                if save_output:
+                    output_path = f"output_{idx}_{upload.name}"
+                    from utils.video import process_video_with_preview
+                    output_path, class_count = process_video_with_preview(temp_input, output_path, show_preview)
+                else:
+                    from utils.video import detect_video_realtime
+                    class_count = detect_video_realtime(temp_input)
+                    output_path = None
+                
+                # Hiển thị kết quả
+                st.success("✅ Xử lý video thành công!")
+                
+                # Video kết quả
+                if save_output and output_path and os.path.exists(output_path):
+                    st.markdown("#### 🎥 Video sau khi phát hiện")
+                    st.video(output_path)
+                    
+                    # Nút tải xuống
+                    with open(output_path, "rb") as file:
+                        st.download_button(
+                            label="⬇️ Tải video đã xử lý",
+                            data=file,
+                            file_name=f"detected_{upload.name}",
+                            mime="video/mp4",
+                            use_container_width=True
+                        )
                 
                 # Thống kê
                 if class_count:
-                    st.success("✅ Xử lý video thành công!")
-                    
-                    # Kiểm tra kiểu dữ liệu của class_count
                     if isinstance(class_count, dict) and class_count:
-                        with st.expander("📊 Thống kê số lượng động vật xuất hiện"):
-                            stats_col1, stats_col2 = st.columns(2)
-                            with stats_col1:
-                                for animal, count in class_count.items():
+                        with st.expander("📊 Thống kê phát hiện", expanded=True):
+                            col1, col2 = st.columns([1, 1])
+                            
+                            with col1:
+                                st.markdown("**Số lượng phát hiện:**")
+                                for animal, count in sorted(class_count.items(), key=lambda x: x[1], reverse=True):
                                     st.metric(label=str(animal).capitalize(), value=count)
-                            with stats_col2:
-                                st.bar_chart(class_count)
+                            
+                            with col2:
+                                st.markdown("**Biểu đồ phân bố:**")
+                                import pandas as pd
+                                df = pd.DataFrame(list(class_count.items()), columns=['Class', 'Count'])
+                                st.bar_chart(df.set_index('Class'))
                     elif isinstance(class_count, (int, float)):
                         st.info(f"📊 Tổng số đối tượng phát hiện: {class_count}")
-                    else:
-                        st.warning("⚠️ Không có thông tin thống kê chi tiết")
-                    
-                    # Tải xuống
-                    if os.path.exists(output_path):
-                        with open(output_path, "rb") as file:
-                            st.download_button(
-                                label="⬇️ Tải video đã xử lý",
-                                data=file,
-                                file_name=f"detected_{upload.name}",
-                                mime="video/mp4"
-                            )
                 else:
                     st.warning("⚠️ Không phát hiện được động vật nào trong video")
                 
                 # Xóa file tạm
                 if os.path.exists(temp_input):
                     os.remove(temp_input)
+                if save_output and output_path and os.path.exists(output_path):
+                    # Không xóa output để user có thể tải
+                    pass
                 
                 st.markdown("---")
                 
             except Exception as e:
                 st.error(f"❌ Lỗi xử lý video {upload.name}: {str(e)}")
+                import traceback
+                with st.expander("Chi tiết lỗi"):
+                    st.code(traceback.format_exc())
+                
                 if os.path.exists(temp_input):
                     os.remove(temp_input)
     else:
         st.info("👆 Vui lòng upload video để bắt đầu phát hiện")
+        
+        # Hướng dẫn
+        with st.expander("💡 Tips để xử lý video tốt hơn"):
+            st.markdown("""
+            ### 📝 Khuyến nghị:
+            
+            **✅ Với video ngắn (< 30s):**
+            - Bật "Hiển thị preview" để xem quá trình xử lý
+            - Thời gian xử lý nhanh, có thể xem trực tiếp
+            
+            **✅ Với video dài (> 1 phút):**
+            - Tắt "Hiển thị preview" để tăng tốc độ
+            - Chỉ cần xem kết quả cuối cùng
+            
+            **⚙️ Cài đặt:**
+            - **Hiển thị preview**: Xem một số frame mẫu trong quá trình xử lý (chậm hơn)
+            - **Lưu video kết quả**: Tạo file video hoàn chỉnh để tải xuống
+            
+            **⏱️ Thời gian xử lý:**
+            - Phụ thuộc vào độ dài video và cấu hình máy chủ
+            - Video 30s: ~1-2 phút
+            - Video 1 phút: ~3-5 phút
+            """)
+
 
 # -------------------------
 # PHÂN TÍCH MODEL
