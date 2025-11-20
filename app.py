@@ -4,43 +4,155 @@ from utils.video import detect_video
 from utils.analysis import *
 import os
 
-st.set_page_config(page_title="Animal Detection App", layout="wide", page_icon="🐾")
+st.set_page_config(
+    page_title="Phát hiện vật thể - Nhóm 12", 
+    layout="wide", 
+    page_icon="🎯",
+    initial_sidebar_state="expanded"
+)
 
 # CSS tùy chỉnh
 st.markdown("""
     <style>
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 100%);
+    }
+    
+    [data-testid="stSidebar"] .element-container {
+        color: white !important;
+    }
+    
+    /* Logo container */
+    .logo-container {
+        text-align: center;
+        padding: 1.5rem 0;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Title styling */
+    .group-title {
+        text-align: center;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        padding: 1rem 0;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    /* Nav items */
+    .nav-item {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.8rem;
+        margin: 0.5rem 0;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    
+    .nav-item:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateX(5px);
+    }
+    
+    /* Main header */
     .main-header {
         text-align: center;
-        color: #2E86AB;
-        padding: 1rem 0;
+        color: #1e3a8a;
+        padding: 1.5rem 0;
+        font-size: 2.5rem;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
     }
+    
     .stButton>button {
         width: 100%;
+    }
+    
+    /* Selectbox styling */
+    [data-testid="stSidebar"] .stSelectbox label {
+        color: white !important;
+        font-weight: bold !important;
+        font-size: 1.1rem !important;
+    }
+    
+    [data-testid="stSidebar"] .stMarkdown {
+        color: white !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 class='main-header'>🐾 Ứng dụng phát hiện động vật bằng YOLOv8</h1>", unsafe_allow_html=True)
+# Main title
+st.markdown("<h1 class='main-header'>🎯 HỆ THỐNG PHÁT HIỆN VẬT THỂ</h1>", unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
-    st.image("https://via.placeholder.com/300x100/2E86AB/FFFFFF?text=Animal+Detection", use_container_width=True)
-    option = st.selectbox(
-        "🎯 Chọn chức năng",
-        ["Detect Image", "Detect Video", "Model Analysis"]
-    )
-    st.markdown("---")
+    # Logo
     st.markdown("""
-    ### 📖 Hướng dẫn
-    - **Detect Image**: Upload ảnh để phát hiện động vật
-    - **Detect Video**: Upload video để phát hiện động vật
-    - **Model Analysis**: Phân tích hiệu suất model
-    """)
+        <div class='logo-container'>
+            <h1 style='color: white; margin: 0; font-size: 3rem;'>🎯</h1>
+            <p style='color: white; margin: 0.5rem 0 0 0; font-size: 1.2rem;'>Object Detection</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Tiêu đề nhóm
+    st.markdown("""
+        <div class='group-title'>
+            📚 NHÓM 12<br>
+            <span style='font-size: 0.9rem;'>Phát hiện vật thể</span>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Navigation menu
+    st.markdown("<p style='color: white; font-weight: bold; font-size: 1.1rem; margin-top: 1rem;'>🧭 CHỨC NĂNG</p>", unsafe_allow_html=True)
+    
+    option = st.selectbox(
+        "Chọn chức năng:",
+        ["🖼️ Phát hiện từ ảnh", "🎥 Phát hiện từ video", "📊 Phân tích model", "📈 Visualize Results"],
+        label_visibility="collapsed"
+    )
+    
+    st.markdown("---")
+    
+    # Thông tin nhóm
+    with st.expander("👥 Thành viên nhóm", expanded=False):
+        st.markdown("""
+        <div style='color: white;'>
+        • Thành viên 1<br>
+        • Thành viên 2<br>
+        • Thành viên 3<br>
+        • Thành viên 4
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Hướng dẫn
+    with st.expander("📖 Hướng dẫn sử dụng", expanded=False):
+        st.markdown("""
+        <div style='color: white;'>
+        <b>🖼️ Phát hiện từ ảnh:</b><br>
+        Upload một hoặc nhiều ảnh để phát hiện vật thể<br><br>
+        
+        <b>🎥 Phát hiện từ video:</b><br>
+        Upload video để phát hiện và theo dõi vật thể<br><br>
+        
+        <b>📊 Phân tích model:</b><br>
+        Đánh giá hiệu suất model với file CSV<br><br>
+        
+        <b>📈 Visualize Results:</b><br>
+        Xem các biểu đồ confusion matrix và kết quả training
+        </div>
+        """, unsafe_allow_html=True)
 
 # -------------------------
 # ẢNH
 # -------------------------
-if option == "Detect Image":
+if option == "🖼️ Phát hiện từ ảnh":
     st.header("📷 Phát hiện động vật từ ảnh")
     
     col1, col2 = st.columns([1, 1])
@@ -114,7 +226,7 @@ if option == "Detect Image":
 # -------------------------
 # VIDEO
 # -------------------------
-elif option == "Detect Video":
+elif option == "🎥 Phát hiện từ video":
     st.header("🎥 Phát hiện động vật từ video")
     
     col1, col2 = st.columns([1, 1])
@@ -201,7 +313,7 @@ elif option == "Detect Video":
 # -------------------------
 # PHÂN TÍCH MODEL
 # -------------------------
-elif option == "Model Analysis":
+elif option == "📊 Phân tích model":
     st.header("📈 Phân tích hiệu suất model")
 
     st.info("""
@@ -302,6 +414,253 @@ elif option == "Model Analysis":
             st.info("💡 Vui lòng kiểm tra lại định dạng file CSV")
     else:
         st.info("👆 Vui lòng upload file CSV để bắt đầu phân tích")
+
+# -------------------------
+# VISUALIZE RESULTS
+# -------------------------
+elif option == "📈 Visualize Results":
+    st.header("📈 Trực quan hóa kết quả Training")
+    
+    tab1, tab2, tab3 = st.tabs(["📊 Confusion Matrix", "📉 Training Curves", "🎯 Class Distribution"])
+    
+    with tab1:
+        st.subheader("Ma trận nhầm lẫn (Confusion Matrix)")
+        
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.markdown("#### 📂 Upload Confusion Matrix")
+            cm_file = st.file_uploader(
+                "Upload ảnh confusion matrix",
+                type=["png", "jpg", "jpeg"],
+                key="cm_upload",
+                help="Upload ảnh confusion matrix từ folder results"
+            )
+            
+            if cm_file:
+                import cv2
+                import numpy as np
+                file_bytes = cm_file.read()
+                img = cv2.imdecode(np.frombuffer(file_bytes, np.uint8), cv2.IMREAD_COLOR)
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                
+                with col2:
+                    st.image(img_rgb, caption="Confusion Matrix", use_container_width=True)
+            else:
+                with col2:
+                    st.info("👈 Vui lòng upload ảnh confusion matrix")
+        
+        st.markdown("---")
+        
+        # Normalized confusion matrix
+        st.markdown("#### 📊 Normalized Confusion Matrix")
+        
+        col3, col4 = st.columns([1, 2])
+        
+        with col3:
+            norm_cm_file = st.file_uploader(
+                "Upload normalized confusion matrix",
+                type=["png", "jpg", "jpeg"],
+                key="norm_cm_upload",
+                help="Upload ảnh normalized confusion matrix"
+            )
+            
+            if norm_cm_file:
+                import cv2
+                import numpy as np
+                file_bytes = norm_cm_file.read()
+                img = cv2.imdecode(np.frombuffer(file_bytes, np.uint8), cv2.IMREAD_COLOR)
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                
+                with col4:
+                    st.image(img_rgb, caption="Normalized Confusion Matrix", use_container_width=True)
+            else:
+                with col4:
+                    st.info("👈 Vui lòng upload ảnh normalized confusion matrix")
+    
+    with tab2:
+        st.subheader("📉 Đường cong Training")
+        
+        # Upload results.png hoặc nhiều ảnh training curves
+        st.markdown("#### 📊 Training/Validation Curves")
+        
+        results_file = st.file_uploader(
+            "Upload ảnh kết quả training (results.png)",
+            type=["png", "jpg", "jpeg"],
+            key="results_upload",
+            help="Upload file results.png từ thư mục runs/detect/train"
+        )
+        
+        if results_file:
+            import cv2
+            import numpy as np
+            file_bytes = results_file.read()
+            img = cv2.imdecode(np.frombuffer(file_bytes, np.uint8), cv2.IMREAD_COLOR)
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            
+            st.image(img_rgb, caption="Training Results", use_container_width=True)
+            
+            # Phân tích
+            with st.expander("📊 Phân tích kết quả", expanded=True):
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.markdown("""
+                    **🎯 Metrics cần chú ý:**
+                    - **mAP50**: Mean Average Precision @ IoU 0.5
+                    - **mAP50-95**: mAP trung bình từ IoU 0.5-0.95
+                    - **Precision**: Độ chính xác dự đoán
+                    - **Recall**: Khả năng phát hiện đối tượng
+                    """)
+                
+                with col2:
+                    st.markdown("""
+                    **📉 Loss Functions:**
+                    - **Box Loss**: Lỗi dự đoán bounding box
+                    - **Class Loss**: Lỗi phân loại
+                    - **DFL Loss**: Distribution Focal Loss
+                    """)
+                
+                with col3:
+                    st.markdown("""
+                    **✅ Dấu hiệu model tốt:**
+                    - Loss giảm dần theo epoch
+                    - mAP tăng dần và ổn định
+                    - Không có dấu hiệu overfitting
+                    - Val loss gần train loss
+                    """)
+        else:
+            st.info("👆 Vui lòng upload file results.png để xem đường cong training")
+        
+        st.markdown("---")
+        
+        # Upload thêm các biểu đồ khác
+        st.markdown("#### 📈 Các biểu đồ khác")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            pr_curve = st.file_uploader(
+                "Upload PR Curve (Precision-Recall)",
+                type=["png", "jpg", "jpeg"],
+                key="pr_upload"
+            )
+            
+            if pr_curve:
+                import cv2
+                import numpy as np
+                file_bytes = pr_curve.read()
+                img = cv2.imdecode(np.frombuffer(file_bytes, np.uint8), cv2.IMREAD_COLOR)
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                st.image(img_rgb, caption="PR Curve", use_container_width=True)
+        
+        with col2:
+            f1_curve = st.file_uploader(
+                "Upload F1 Curve",
+                type=["png", "jpg", "jpeg"],
+                key="f1_upload"
+            )
+            
+            if f1_curve:
+                import cv2
+                import numpy as np
+                file_bytes = f1_curve.read()
+                img = cv2.imdecode(np.frombuffer(file_bytes, np.uint8), cv2.IMREAD_COLOR)
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                st.image(img_rgb, caption="F1 Curve", use_container_width=True)
+    
+    with tab3:
+        st.subheader("🎯 Phân bố Class và Labels")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 📊 Label Distribution")
+            labels_file = st.file_uploader(
+                "Upload ảnh labels distribution",
+                type=["png", "jpg", "jpeg"],
+                key="labels_upload"
+            )
+            
+            if labels_file:
+                import cv2
+                import numpy as np
+                file_bytes = labels_file.read()
+                img = cv2.imdecode(np.frombuffer(file_bytes, np.uint8), cv2.IMREAD_COLOR)
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                st.image(img_rgb, caption="Labels Distribution", use_container_width=True)
+        
+        with col2:
+            st.markdown("#### 🖼️ Train Batch Examples")
+            batch_file = st.file_uploader(
+                "Upload ảnh train batch",
+                type=["png", "jpg", "jpeg"],
+                key="batch_upload"
+            )
+            
+            if batch_file:
+                import cv2
+                import numpy as np
+                file_bytes = batch_file.read()
+                img = cv2.imdecode(np.frombuffer(file_bytes, np.uint8), cv2.IMREAD_COLOR)
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                st.image(img_rgb, caption="Train Batch", use_container_width=True)
+        
+        st.markdown("---")
+        
+        # Predictions examples
+        st.markdown("#### 🎯 Validation Predictions")
+        
+        pred_files = st.file_uploader(
+            "Upload ảnh val predictions (có thể chọn nhiều)",
+            type=["png", "jpg", "jpeg"],
+            accept_multiple_files=True,
+            key="pred_upload"
+        )
+        
+        if pred_files:
+            cols = st.columns(3)
+            for idx, pred_file in enumerate(pred_files):
+                import cv2
+                import numpy as np
+                file_bytes = pred_file.read()
+                img = cv2.imdecode(np.frombuffer(file_bytes, np.uint8), cv2.IMREAD_COLOR)
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                
+                with cols[idx % 3]:
+                    st.image(img_rgb, caption=f"Prediction {idx+1}", use_container_width=True)
+        else:
+            st.info("👆 Upload các ảnh validation predictions để xem kết quả dự đoán")
+    
+    # Hướng dẫn
+    with st.expander("📖 Hướng dẫn tìm các file results", expanded=False):
+        st.markdown("""
+        ### 📁 Vị trí các file sau khi training YOLOv8:
+        
+        Sau khi training xong, các file kết quả thường nằm trong thư mục:
+        ```
+        runs/detect/train/
+        ├── confusion_matrix.png
+        ├── confusion_matrix_normalized.png
+        ├── results.png
+        ├── PR_curve.png
+        ├── F1_curve.png
+        ├── labels.jpg
+        ├── train_batch0.jpg
+        ├── val_batch0_labels.jpg
+        └── val_batch0_pred.jpg
+        ```
+        
+        ### 📊 Ý nghĩa các file:
+        
+        - **confusion_matrix.png**: Ma trận nhầm lẫn
+        - **results.png**: Tổng hợp các metrics theo epoch
+        - **PR_curve.png**: Đường cong Precision-Recall
+        - **F1_curve.png**: Đường cong F1-Score
+        - **labels.jpg**: Phân bố nhãn trong dataset
+        - **train_batch0.jpg**: Ví dụ các ảnh training
+        - **val_batch0_pred.jpg**: Kết quả dự đoán trên validation set
+        """)
 
 # Footer
 st.markdown("---")
