@@ -118,10 +118,11 @@ with st.sidebar:
     with st.expander("👥 Thành viên nhóm", expanded=False):
         st.markdown("""
         <div style='color: white;'>
-        • Thành viên 1<br>
-        • Thành viên 2<br>
-        • Thành viên 3<br>
-        • Thành viên 4
+        • Trần Thanh Đạt    (Lead)<br>
+        • Nguyễn Minh Phúc  (Thành Viên)<br>
+        • Trần Thanh Trúc   (Thành Viên)<br>
+        • Đồng Đức Mạnh     (Thành Viên)<br>
+        • Nguyễn Trần Duy Khánh (Thành Viên)
         </div>
         """, unsafe_allow_html=True)
     
