@@ -144,7 +144,7 @@ with st.sidebar:
 # ẢNH
 # -------------------------
 if option == "🖼️ Phát hiện từ ảnh":
-    st.header("📷 Phát hiện động vật từ ảnh")
+    st.header("📷 Phát hiện vật thể từ ảnh")
     
     # Thanh cài đặt
     with st.expander("⚙️ Cài đặt phát hiện", expanded=True):
