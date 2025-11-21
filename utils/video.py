@@ -2,7 +2,7 @@ import cv2
 from ultralytics import YOLO
 import streamlit as st
 
-model = YOLO("models/best.pt")
+model = YOLO("models/best(1).pt")
 
 def detect_video(video_path, output_path="output.mp4", conf=0.25, iou=0.45):
     """
