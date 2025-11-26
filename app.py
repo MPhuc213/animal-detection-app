@@ -1,21 +1,20 @@
 import streamlit as st
-from utils.detect import detect_image
 from utils.video import process_video_with_preview, detect_video_realtime
 import os
 import glob
+import cv2
+import numpy as np
+from ultralytics import YOLO
 
-# FORCE RELOAD - Thêm đoạn này
+# FORCE RELOAD
 import importlib
 import sys
-if 'utils.detect' in sys.modules:
-    importlib.reload(sys.modules['utils.detect'])
-    from utils.detect import detect_image
 if 'utils.video' in sys.modules:
     importlib.reload(sys.modules['utils.video'])
     from utils.video import process_video_with_preview, detect_video_realtime
 
 st.set_page_config(
-    page_title="Phát hiện vật thể - Nhóm 12", 
+    page_title="Đếm vật thể - Nhóm 12", 
     layout="wide", 
     page_icon="🎯",
     initial_sidebar_state="expanded"
@@ -24,25 +23,20 @@ st.set_page_config(
 # CSS tùy chỉnh
 st.markdown("""
     <style>
-    /* Sidebar styling */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 100%);
     }
-    
     [data-testid="stSidebar"] .element-container {
         color: white !important;
     }
-    
-    /* Logo container */
-    .logo-container {
+    .main-header {
         text-align: center;
+        color: #1e3a8a;
         padding: 1.5rem 0;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        margin-bottom: 1.5rem;
+        font-size: 2.5rem;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
     }
-    
-    /* Title styling */
     .group-title {
         text-align: center;
         color: white;
@@ -54,28 +48,14 @@ st.markdown("""
         margin-bottom: 1rem;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
-    
-    /* Main header */
-    .main-header {
-        text-align: center;
-        color: #1e3a8a;
-        padding: 1.5rem 0;
-        font-size: 2.5rem;
-        font-weight: bold;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-    }
-    
     .stButton>button {
         width: 100%;
     }
-    
-    /* Selectbox styling */
     [data-testid="stSidebar"] .stSelectbox label {
         color: white !important;
         font-weight: bold !important;
         font-size: 1.1rem !important;
     }
-    
     [data-testid="stSidebar"] .stMarkdown {
         color: white !important;
     }
@@ -83,32 +63,69 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Main title
-st.markdown("<h1 class='main-header'>🎯 HỆ THỐNG PHÁT HIỆN VẬT THỂ</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-header'>🎯 HỆ THỐNG ĐẾM VẬT THỂ</h1>", unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
     # Logo
     st.markdown("""
-        <div class='logo-container'>
-            <h1 style='color: white; margin: 0; font-size: 3rem;'>🎯</h1>
-            <p style='color: white; margin: 0.5rem 0 0 0; font-size: 1.2rem;'>Object Detection</p>
+        <div style="text-align: center; padding: 20px 0; background-color: #0e1a2f; border-radius: 15px; margin-bottom: 20px;">
+            <img src="https://tools1s.com/images/dkmh/vaa-logo.png" width="140">
+            <p style="color: white; margin: 15px 0 0 0; font-size: 1.35rem; font-weight: bold; letter-spacing: 1px;">
+                Nhóm 12 _ XỬ LÍ THỊ GIÁC
+            </p>
         </div>
     """, unsafe_allow_html=True)
     
     # Tiêu đề nhóm
     st.markdown("""
         <div class='group-title'>
-            📚 NHÓM 12<br>
-            <span style='font-size: 0.9rem;'>Phát hiện vật thể</span>
+            📚 Nhóm 12<br>
+            <span style='font-size: 0.9rem;'>ĐẾM vật thể</span>
         </div>
     """, unsafe_allow_html=True)
     
-    # Navigation menu
-    st.markdown("<p style='color: white; font-weight: bold; font-size: 1.1rem; margin-top: 1rem;'>🧭 CHỨC NĂNG</p>", unsafe_allow_html=True)
+    # CHỌN MODEL
+    st.markdown("<p style='color: white; font-weight: bold; font-size: 1.1rem; margin-top: 1rem;'>🤖 CHỌN MODEL</p>", unsafe_allow_html=True)
+    
+    model_folder = "models"
+    if os.path.exists(model_folder):
+        model_files = glob.glob(os.path.join(model_folder, "*.pt"))
+        model_names = [os.path.basename(f) for f in model_files]
+        
+        if model_names:
+            selected_model = st.selectbox(
+                "Model:",
+                model_names,
+                index=model_names.index("best.pt") if "best.pt" in model_names else 0,
+                label_visibility="collapsed"
+            )
+            model_path = os.path.join(model_folder, selected_model)
+            
+            model_size = os.path.getsize(model_path) / (1024 * 1024)
+            st.markdown(f"""
+                <div style='background: rgba(255,255,255,0.1); padding: 0.5rem; border-radius: 5px; margin: 0.5rem 0;'>
+                    <small style='color: white;'>
+                    📦 Kích thước: {model_size:.1f} MB<br>
+                    📁 {model_path}
+                    </small>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.error("⚠️ Không tìm thấy file model (.pt)")
+            model_path = None
+    else:
+        st.error(f"⚠️ Thư mục '{model_folder}' không tồn tại")
+        model_path = None
+    
+    st.markdown("---")
+    
+    # Navigation
+    st.markdown("<p style='color: white; font-weight: bold; font-size: 1.1rem;'>🧭 CHỨC NĂNG</p>", unsafe_allow_html=True)
     
     option = st.selectbox(
         "Chọn chức năng:",
-        ["🖼️ Phát hiện từ ảnh", "🎥 Phát hiện từ video", "📈 Visualize Training Results"],
+        ["🖼️ Đếm từ ảnh", "🎥 Đếm từ video", "📈 Visualize Training Results", "🧪 Test & Validation Results"],
         label_visibility="collapsed"
     )
     
@@ -118,37 +135,48 @@ with st.sidebar:
     with st.expander("👥 Thành viên nhóm", expanded=False):
         st.markdown("""
         <div style='color: white;'>
-        • Trần Thanh Đạt    (Lead)<br>
-        • Nguyễn Minh Phúc  (Thành Viên)<br>
-        • Trần Thanh Trúc   (Thành Viên)<br>
-        • Đồng Đức Mạnh     (Thành Viên)<br>
-        • Nguyễn Trần Duy Khánh (Thành Viên)
+        • Trần Kim Minh (Lead)<br>
+        • Nguyễn Minh Phúc (Thành Viên)<br>
+        • Vũ Thị Kim Loan (Thành Viên)<br>
+        • Huỳnh Chí Danh (Thành Viên)<br>
+        • Nguyễn Triệu Thiên Anh (Thành Viên)
         </div>
         """, unsafe_allow_html=True)
     
-    # Hướng dẫn
-    with st.expander("📖 Hướng dẫn sử dụng", expanded=False):
+    with st.expander("📖 Hướng dẫn", expanded=False):
         st.markdown("""
         <div style='color: white;'>
-        <b>🖼️ Phát hiện từ ảnh:</b><br>
-        Upload một hoặc nhiều ảnh để phát hiện vật thể<br><br>
-        
-        <b>🎥 Phát hiện từ video:</b><br>
-        Upload video để phát hiện và theo dõi vật thể<br><br>
-        
-        <b>📈 Visualize Training Results:</b><br>
-        Xem kết quả training từ thư mục runs/detect/train
+        <b>🖼️ Đếm từ ảnh:</b><br>
+        Upload ảnh để Đếm vật thể<br><br>
+        <b>🎥 Đếm từ video:</b><br>
+        Upload video để Đếm và đếm xe<br><br>
+        <b>📈 Visualize:</b><br>
+        Xem kết quả training model
         </div>
         """, unsafe_allow_html=True)
 
 # -------------------------
 # ẢNH
 # -------------------------
-if option == "🖼️ Phát hiện từ ảnh":
-    st.header("📷 Phát hiện vật thể từ ảnh")
+if option == "🖼️ Đếm từ ảnh":
+    st.header("📷 Đếm vật thể từ ảnh")
     
-    # Thanh cài đặt
-    with st.expander("⚙️ Cài đặt phát hiện", expanded=True):
+    if model_path is None or not os.path.exists(model_path):
+        st.error("❌ Vui lòng chọn model hợp lệ từ sidebar")
+        st.stop()
+    
+    @st.cache_resource
+    def load_model(path):
+        return YOLO(path)
+    
+    try:
+        model = load_model(model_path)
+        st.success(f"✅ Đã load model: {selected_model}")
+    except Exception as e:
+        st.error(f"❌ Lỗi load model: {str(e)}")
+        st.stop()
+    
+    with st.expander("⚙️ Cài đặt thông số", expanded=True):
         col1, col2 = st.columns(2)
         
         with col1:
@@ -158,7 +186,7 @@ if option == "🖼️ Phát hiện từ ảnh":
                 max_value=1.0,
                 value=0.25,
                 step=0.05,
-                help="Ngưỡng độ tin cậy tối thiểu (0-1). Giá trị càng cao, kết quả càng chắc chắn nhưng có thể bỏ sót."
+                help="Ngưỡng độ tin cậy"
             )
         
         with col2:
@@ -168,21 +196,17 @@ if option == "🖼️ Phát hiện từ ảnh":
                 max_value=1.0,
                 value=0.45,
                 step=0.05,
-                help="Ngưỡng IoU cho NMS (Non-Maximum Suppression). Giá trị càng thấp, loại bỏ box trùng lặp càng nhiều."
+                help="Ngưỡng IoU cho NMS"
             )
         
-        st.info(f"**Cài đặt hiện tại:** Confidence ≥ {confidence_threshold:.2f} | IoU ≤ {iou_threshold:.2f}")
+        st.info(f"**Cài đặt:** Confidence ≥ {confidence_threshold:.2f} | IoU ≤ {iou_threshold:.2f}")
     
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.subheader("🖼️ Upload ảnh")
-        upload_files = st.file_uploader(
-            "Chọn một hoặc nhiều ảnh", 
-            type=["jpg", "jpeg", "png"],
-            accept_multiple_files=True,
-            help="Hỗ trợ định dạng: JPG, JPEG, PNG"
-        )
+    upload_files = st.file_uploader(
+        "🖼️ Chọn ảnh", 
+        type=["jpg", "jpeg", "png"],
+        accept_multiple_files=True,
+        help="JPG, JPEG, PNG"
+    )
     
     if upload_files:
         for idx, upload in enumerate(upload_files):
@@ -192,138 +216,142 @@ if option == "🖼️ Phát hiện từ ảnh":
             
             try:
                 file_bytes = upload.read()
-                import numpy as np
-                import cv2
-                
-                # Đọc ảnh
                 img = cv2.imdecode(np.frombuffer(file_bytes, np.uint8), cv2.IMREAD_COLOR)
                 
                 if img is None:
-                    st.error(f"❌ Không thể đọc ảnh {upload.name}")
+                    st.error(f"❌ Không đọc được ảnh")
                     continue
                 
                 with col_left:
                     st.markdown("**Ảnh gốc**")
                     st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), use_container_width=True)
                 
-                # Detect với confidence và iou
-                with st.spinner(f"🔍 Đang phát hiện vật thể trong {upload.name}..."):
-                    annotated, class_count = detect_image(img, conf=confidence_threshold, iou=iou_threshold)
+                with st.spinner("🔍 Đang Đếm..."):
+                    results = model(img, conf=confidence_threshold, iou=iou_threshold)[0]
+                    annotated = results.plot()
+                    
+                    class_count = {}
+                    for box in results.boxes:
+                        cls_id = int(box.cls.item())
+                        class_name = model.names[cls_id]
+                        class_count[class_name] = class_count.get(class_name, 0) + 1
                 
                 with col_right:
-                    st.markdown("**Kết quả phát hiện**")
+                    st.markdown("**Kết quả**")
                     st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), use_container_width=True)
                 
-                # Thống kê
                 if class_count:
-                    st.success("✅ Phát hiện thành công!")
-                    
-                    if isinstance(class_count, dict) and class_count:
-                        with st.expander("📊 Thống kê phát hiện", expanded=True):
-                            stats_col1, stats_col2 = st.columns(2)
-                            with stats_col1:
-                                for animal, count in class_count.items():
-                                    st.metric(label=str(animal).capitalize(), value=count)
-                            with stats_col2:
-                                st.bar_chart(class_count)
-                    elif isinstance(class_count, (int, float)):
-                        st.info(f"📊 Tổng số đối tượng phát hiện: {class_count}")
+                    st.success("✅ Đếm thành công!")
+                    with st.expander("📊 Thống kê", expanded=True):
+                        cols = st.columns(len(class_count))
+                        for idx, (name, count) in enumerate(class_count.items()):
+                            with cols[idx]:
+                                st.metric(str(name).capitalize(), count)
+                        st.bar_chart(class_count)
                 else:
-                    st.warning("⚠️ Không phát hiện được vật thể nào trong ảnh")
-                    st.info("💡 Thử giảm Confidence Threshold để phát hiện nhiều hơn")
+                    st.warning("⚠️ Không Đếm được xe")
                 
                 st.markdown("---")
                 
             except Exception as e:
-                st.error(f"❌ Lỗi xử lý ảnh {upload.name}: {str(e)}")
+                st.error(f"❌ Lỗi: {str(e)}")
     else:
-        st.info("👆 Vui lòng upload ảnh để bắt đầu phát hiện")
+        st.info("👆 Upload ảnh để bắt đầu")
 
 # -------------------------
 # VIDEO
 # -------------------------
-elif option == "🎥 Phát hiện từ video":
-    st.header("🎥 Phát hiện vật thể từ video")
+elif option == "🎥 Đếm từ video":
+    st.header("🎥 Đếm vật thể từ video")
     
-    # Tùy chọn xử lý
+    if model_path is None or not os.path.exists(model_path):
+        st.error("❌ Vui lòng chọn model từ sidebar")
+        st.stop()
+    
+    st.success(f"✅ Model: {selected_model}")
+    
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.subheader("📹 Upload video")
         upload_files = st.file_uploader(
-            "Chọn một hoặc nhiều video", 
+            "📹 Chọn video", 
             type=["mp4", "avi", "mov"],
-            accept_multiple_files=True,
-            help="Hỗ trợ định dạng: MP4, AVI, MOV"
+            accept_multiple_files=True
         )
     
     with col2:
-        st.subheader("⚙️ Cài đặt")
-        show_preview = st.checkbox("Hiển thị preview", value=True, help="Hiển thị frame mẫu khi xử lý")
-        save_output = st.checkbox("Lưu video", value=True, help="Lưu video để tải xuống")
+        st.markdown("**⚙️ Cài đặt:**")
+        show_preview = st.checkbox("Preview", value=True)
+        save_output = st.checkbox("Lưu video", value=True)
+        use_tracking = st.checkbox("Tracking", value=True, help="Đếm unique objects")
+    
+    with st.expander("🎯 Ngưỡng Đếm", expanded=True):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            confidence_threshold = st.slider("🎯 Confidence", 0.0, 1.0, 0.25, 0.05)
+        
+        with col2:
+            iou_threshold = st.slider("📦 IoU", 0.0, 1.0, 0.45, 0.05)
+        
+        st.info(f"Conf ≥ {confidence_threshold:.2f} | IoU ≤ {iou_threshold:.2f} | Tracking: {'✅' if use_tracking else '❌'}")
     
     if upload_files:
         for idx, upload in enumerate(upload_files):
             st.markdown(f"### 🎬 Video {idx + 1}: {upload.name}")
             
             try:
-                # Lưu video tạm
                 temp_input = f"temp_input_{idx}.mp4"
                 with open(temp_input, "wb") as f:
                     f.write(upload.read())
                 
-                # Hiển thị video gốc
-                with st.expander("📹 Xem video gốc", expanded=False):
+                with st.expander("📹 Video gốc", expanded=False):
                     st.video(temp_input)
                 
-                # Phát hiện
-                st.markdown("#### 🔍 Đang xử lý video...")
+                st.markdown("#### 🔍 Đang xử lý...")
                 
                 if save_output:
                     output_path = f"output_{idx}_{upload.name}"
-                    output_path, class_count = process_video_with_preview(temp_input, output_path, show_preview)
+                    output_path, class_count = process_video_with_preview(temp_input, output_path, show_preview,conf=confidence_threshold, iou=iou_threshold,model_path=model_path, use_tracking=use_tracking)
                 else:
-                    class_count = detect_video_realtime(temp_input)
+                    class_count = detect_video_realtime(
+                        temp_input,
+                        conf=confidence_threshold, iou=iou_threshold,
+                        model_path=model_path, use_tracking=use_tracking
+                    )
                     output_path = None
                 
-                st.success("✅ Xử lý video thành công!")
+                st.success("✅ Hoàn thành!")
                 
-                # Video kết quả
                 if save_output and output_path and os.path.exists(output_path):
-                    st.markdown("#### 🎥 Video sau khi phát hiện")
+                    st.markdown("#### 🎥 Video đã xử lý")
                     st.video(output_path)
                     
                     with open(output_path, "rb") as file:
                         st.download_button(
-                            label="⬇️ Tải video",
-                            data=file,
-                            file_name=f"detected_{upload.name}",
-                            mime="video/mp4",
+                            "⬇️ Tải video",
+                            file,
+                            f"detected_{upload.name}",
+                            "video/mp4",
                             use_container_width=True
                         )
                 
-                # Thống kê
-                if class_count:
-                    if isinstance(class_count, dict) and class_count:
-                        with st.expander("📊 Thống kê phát hiện", expanded=True):
-                            col1, col2 = st.columns([1, 1])
-                            
-                            with col1:
-                                st.markdown("**Số lượng:**")
-                                for animal, count in sorted(class_count.items(), key=lambda x: x[1], reverse=True):
-                                    st.metric(label=str(animal).capitalize(), value=count)
-                            
-                            with col2:
-                                st.markdown("**Biểu đồ:**")
-                                import pandas as pd
-                                df = pd.DataFrame(list(class_count.items()), columns=['Class', 'Count'])
-                                st.bar_chart(df.set_index('Class'))
-                    elif isinstance(class_count, (int, float)):
-                        st.info(f"📊 Tổng: {class_count} đối tượng")
+                if class_count and isinstance(class_count, dict):
+                    with st.expander("📊 Thống kê", expanded=True):
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown(f"**Số lượng {'unique' if use_tracking else 'MAX'}:**")
+                            for name, count in sorted(class_count.items(), key=lambda x: x[1], reverse=True):
+                                st.metric(str(name).capitalize(), count)
+                        
+                        with col2:
+                            import pandas as pd
+                            df = pd.DataFrame(list(class_count.items()), columns=['Class', 'Count'])
+                            st.bar_chart(df.set_index('Class'))
                 else:
-                    st.warning("⚠️ Không phát hiện được vật thể")
+                    st.warning("⚠️ Không đếm được xe")
                 
-                # Cleanup
                 if os.path.exists(temp_input):
                     os.remove(temp_input)
                 
@@ -334,232 +362,432 @@ elif option == "🎥 Phát hiện từ video":
                 import traceback
                 with st.expander("Chi tiết"):
                     st.code(traceback.format_exc())
-                
-                if os.path.exists(temp_input):
-                    os.remove(temp_input)
     else:
-        st.info("👆 Vui lòng upload video")
+        st.info("👆 Upload video")
 
 # -------------------------
-# VISUALIZE TRAINING RESULTS
+# VISUALIZE
 # -------------------------
 elif option == "📈 Visualize Training Results":
-    st.header("📈 Kết quả Training Model")
-    
-    # Nhập đường dẫn thư mục
-    st.markdown("### 📁 Chọn thư mục kết quả training")
+    st.header("📈 Kết quả Training")
     
     col1, col2 = st.columns([3, 1])
     
     with col1:
         results_path = st.text_input(
-            "Đường dẫn thư mục:",
-            value="runs/detect/train",
-            help="Đường dẫn đến thư mục chứa kết quả training (vd: runs/detect/train)"
+            "📁 Đường dẫn:",
+            value="run/detect/train",
+            help="Ví dụ: run/detect/train"
         )
     
     with col2:
         refresh = st.button("🔄 Tải lại", use_container_width=True)
     
-    # Kiểm tra thư mục tồn tại
     if os.path.exists(results_path):
-        st.success(f"✅ Tìm thấy thư mục: `{results_path}`")
+        st.success(f"✅ Tìm thấy: `{results_path}`")
         
-        # Tab để tổ chức nội dung
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "📊 Confusion Matrix", 
-            "📉 Training Curves", 
-            "🎯 Predictions", 
-            "📂 Tất cả"
-        ])
+        tab1, tab2, tab3, tab4 = st.tabs(["📊 Confusion Matrix", "📉 Curves", "🎯 Predictions", "📂 All Files"])
         
-        # Tab 1: Confusion Matrix
         with tab1:
             st.subheader("Ma trận nhầm lẫn")
-            
             col1, col2 = st.columns(2)
             
-            # Confusion matrix thông thường
             with col1:
                 cm_path = os.path.join(results_path, "confusion_matrix.png")
                 if os.path.exists(cm_path):
                     st.image(cm_path, caption="Confusion Matrix", use_container_width=True)
                 else:
-                    st.warning("⚠️ Không tìm thấy confusion_matrix.png")
+                    st.warning("⚠️ Không có confusion_matrix.png")
             
-            # Normalized confusion matrix
             with col2:
-                cm_norm_path = os.path.join(results_path, "confusion_matrix_normalized.png")
-                if os.path.exists(cm_norm_path):
-                    st.image(cm_norm_path, caption="Normalized Confusion Matrix", use_container_width=True)
+                cm_norm = os.path.join(results_path, "confusion_matrix_normalized.png")
+                if os.path.exists(cm_norm):
+                    st.image(cm_norm, caption="Normalized", use_container_width=True)
                 else:
-                    st.warning("⚠️ Không tìm thấy confusion_matrix_normalized.png")
+                    st.warning("⚠️ Không có confusion_matrix_normalized.png")
         
-        # Tab 2: Training Curves
         with tab2:
-            st.subheader("Đường cong Training")
-            
-            # Results.png - tổng hợp
             results_img = os.path.join(results_path, "results.png")
             if os.path.exists(results_img):
-                st.image(results_img, caption="Training Results Overview", use_container_width=True)
-                
-                # Giải thích
-                with st.expander("📖 Giải thích các metrics", expanded=False):
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.markdown("""
-                        **📊 Metrics:**
-                        - **mAP50**: Độ chính xác @ IoU 0.5
-                        - **mAP50-95**: Độ chính xác trung bình
-                        - **Precision**: Độ chính xác dự đoán
-                        - **Recall**: Khả năng phát hiện
-                        """)
-                    
-                    with col2:
-                        st.markdown("""
-                        **📉 Loss:**
-                        - **Box Loss**: Lỗi vị trí bounding box
-                        - **Class Loss**: Lỗi phân loại
-                        - **DFL Loss**: Distribution Focal Loss
-                        """)
-                    
-                    with col3:
-                        st.markdown("""
-                        **✅ Model tốt khi:**
-                        - Loss giảm dần
-                        - mAP tăng và ổn định
-                        - Val loss ~ Train loss
-                        - Không overfitting
-                        """)
+                st.image(results_img, caption="Training Results", use_container_width=True)
             else:
-                st.warning("⚠️ Không tìm thấy results.png")
+                st.warning("⚠️ Không có results.png")
             
             st.markdown("---")
-            
-            # PR và F1 curves
             col1, col2 = st.columns(2)
             
             with col1:
                 pr_path = os.path.join(results_path, "PR_curve.png")
+                if os.path.exists(pr_path):
+                    st.image(pr_path, caption="PR Curve", use_container_width=True)
+            
+            with col2:
+                f1_path = os.path.join(results_path, "F1_curve.png")
+                if os.path.exists(f1_path):
+                    st.image(f1_path, caption="F1 Curve", use_container_width=True)
+        
+        with tab3:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                labels_path = os.path.join(results_path, "labels.jpg")
+                if os.path.exists(labels_path):
+                    st.image(labels_path, caption="Labels", use_container_width=True)
+                
+                train_batch = os.path.join(results_path, "train_batch0.jpg")
+                if os.path.exists(train_batch):
+                    st.image(train_batch, caption="Train Batch", use_container_width=True)
+            
+            with col2:
+                val_labels = os.path.join(results_path, "val_batch0_labels.jpg")
+                if os.path.exists(val_labels):
+                    st.image(val_labels, caption="Val Labels", use_container_width=True)
+                
+                val_pred = os.path.join(results_path, "val_batch0_pred.jpg")
+                if os.path.exists(val_pred):
+                    st.image(val_pred, caption="Val Predictions", use_container_width=True)
+        
+        with tab4:
+            image_files = []
+            for ext in ['*.png', '*.jpg', '*.jpeg']:
+                image_files.extend(glob.glob(os.path.join(results_path, ext)))
+            
+            if image_files:
+                st.write(f"**{len(image_files)}** files")
+                cols = st.columns(3)
+                for idx, img_path in enumerate(sorted(image_files)):
+                    with cols[idx % 3]:
+                        st.image(img_path, caption=os.path.basename(img_path), use_container_width=True)
+            else:
+                st.warning("⚠️ Không có file ảnh")
+    else:
+        st.error(f"❌ Không tìm thấy: `{results_path}`")
+
+# -------------------------
+# TEST & VALIDATION RESULTS
+# -------------------------
+elif option == "🧪 Test & Validation Results":
+    st.header("🧪 Kết quả Test/Validation Model")
+    
+    st.info("""
+    📂 **Hiển thị kết quả test/validation đã chạy sẵn**
+    
+    Nhập đường dẫn đến thư mục chứa kết quả (confusion matrix, curves, predictions)
+    """)
+    
+    # Nhập đường dẫn
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        test_results_path = st.text_input(
+            "📁 Đường dẫn kết quả test:",
+            value="run/detect/test",
+            help="Ví dụ: run/detect/val, run/detect/test, run/detect/val2"
+        )
+    
+    with col2:
+        refresh_btn = st.button("🔄 Tải lại", use_container_width=True)
+    
+    # Kiểm tra thư mục
+    if os.path.exists(test_results_path):
+        st.success(f"✅ Tìm thấy: `{test_results_path}`")
+        
+        # Tabs hiển thị kết quả
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            "📊 Confusion Matrix", 
+            "📈 Performance Curves", 
+            "🎯 Predictions",
+            "📉 Additional Plots",
+            "📂 All Files"
+        ])
+        
+        # TAB 1: Confusion Matrix
+        with tab1:
+            st.subheader("Ma trận nhầm lẫn")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                cm_path = os.path.join(test_results_path, "confusion_matrix.png")
+                if os.path.exists(cm_path):
+                    st.image(cm_path, caption="Confusion Matrix", use_container_width=True)
+                    
+                    # Download button
+                    with open(cm_path, "rb") as f:
+                        st.download_button(
+                            "⬇️ Download",
+                            f,
+                            "confusion_matrix.png",
+                            "image/png",
+                            use_container_width=True
+                        )
+                else:
+                    st.warning("⚠️ Không tìm thấy confusion_matrix.png")
+            
+            with col2:
+                cm_norm_path = os.path.join(test_results_path, "confusion_matrix_normalized.png")
+                if os.path.exists(cm_norm_path):
+                    st.image(cm_norm_path, caption="Normalized Confusion Matrix", use_container_width=True)
+                    
+                    with open(cm_norm_path, "rb") as f:
+                        st.download_button(
+                            "⬇️ Download",
+                            f,
+                            "confusion_matrix_normalized.png",
+                            "image/png",
+                            use_container_width=True
+                        )
+                else:
+                    st.warning("⚠️ Không tìm thấy confusion_matrix_normalized.png")
+        
+        # TAB 2: Performance Curves
+        with tab2:
+            st.subheader("Các đường cong đánh giá")
+            
+            # Row 1: PR và F1
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                pr_path = os.path.join(test_results_path, "PR_curve.png")
                 if os.path.exists(pr_path):
                     st.image(pr_path, caption="Precision-Recall Curve", use_container_width=True)
                 else:
                     st.info("ℹ️ Không có PR_curve.png")
             
             with col2:
-                f1_path = os.path.join(results_path, "F1_curve.png")
+                f1_path = os.path.join(test_results_path, "F1_curve.png")
                 if os.path.exists(f1_path):
-                    st.image(f1_path, caption="F1 Curve", use_container_width=True)
+                    st.image(f1_path, caption="F1 Score Curve", use_container_width=True)
                 else:
                     st.info("ℹ️ Không có F1_curve.png")
+            
+            # Row 2: P và R
+            col3, col4 = st.columns(2)
+            
+            with col3:
+                p_path = os.path.join(test_results_path, "P_curve.png")
+                if os.path.exists(p_path):
+                    st.image(p_path, caption="Precision Curve", use_container_width=True)
+                else:
+                    st.info("ℹ️ Không có P_curve.png")
+            
+            with col4:
+                r_path = os.path.join(test_results_path, "R_curve.png")
+                if os.path.exists(r_path):
+                    st.image(r_path, caption="Recall Curve", use_container_width=True)
+                else:
+                    st.info("ℹ️ Không có R_curve.png")
         
-        # Tab 3: Predictions
+        # TAB 3: Predictions
         with tab3:
-            st.subheader("Ví dụ dự đoán")
+            st.subheader("Ví dụ predictions")
+            
+            # Tìm ảnh predictions
+            pred_images = []
+            for ext in ['*.jpg', '*.jpeg', '*.png']:
+                pred_images.extend(glob.glob(os.path.join(test_results_path, ext)))
+            
+            # Loại bỏ các file plot/curve
+            exclude_keywords = ['confusion', 'curve', 'Curve', 'PR_', 'F1_', 'P_', 'R_', 'labels']
+            pred_images = [img for img in pred_images if not any(kw in os.path.basename(img) for kw in exclude_keywords)]
+            
+            if pred_images:
+                st.write(f"Tìm thấy **{len(pred_images)}** ảnh predictions")
+                
+                # Điều chỉnh số cột
+                cols_per_row = st.slider("Số cột hiển thị:", 2, 4, 3, key="pred_cols")
+                
+                # Tìm kiếm
+                search_term = st.text_input("🔍 Tìm kiếm ảnh:", placeholder="Nhập tên file...")
+                
+                # Lọc
+                if search_term:
+                    pred_images = [img for img in pred_images if search_term.lower() in os.path.basename(img).lower()]
+                    st.write(f"Hiển thị **{len(pred_images)}** ảnh")
+                
+                # Hiển thị grid
+                cols = st.columns(cols_per_row)
+                for idx, img_path in enumerate(pred_images):
+                    with cols[idx % cols_per_row]:
+                        st.image(img_path, caption=os.path.basename(img_path), use_container_width=True)
+                        
+                        # Info
+                        file_size = os.path.getsize(img_path) / 1024
+                        st.caption(f"📦 {file_size:.1f} KB")
+            else:
+                st.info("ℹ️ Không tìm thấy ảnh predictions")
+        
+        # TAB 4: Additional Plots
+        with tab4:
+            st.subheader("Các biểu đồ khác")
+            
+            # Labels
+            labels_path = os.path.join(test_results_path, "labels.jpg")
+            labels_correlogram = os.path.join(test_results_path, "labels_correlogram.jpg")
             
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("#### 📊 Labels (Ground Truth)")
-                labels_path = os.path.join(results_path, "labels.jpg")
                 if os.path.exists(labels_path):
                     st.image(labels_path, caption="Labels Distribution", use_container_width=True)
                 
-                # Train batch
-                train_batch = os.path.join(results_path, "train_batch0.jpg")
-                if os.path.exists(train_batch):
-                    st.image(train_batch, caption="Train Batch Example", use_container_width=True)
+                # Val batch
+                val_batch = os.path.join(test_results_path, "val_batch0_labels.jpg")
+                if os.path.exists(val_batch):
+                    st.image(val_batch, caption="Validation Batch Labels", use_container_width=True)
             
             with col2:
-                st.markdown("#### 🎯 Predictions")
+                if os.path.exists(labels_correlogram):
+                    st.image(labels_correlogram, caption="Labels Correlogram", use_container_width=True)
                 
-                # Val batch labels
-                val_labels = os.path.join(results_path, "val_batch0_labels.jpg")
-                if os.path.exists(val_labels):
-                    st.image(val_labels, caption="Validation Labels", use_container_width=True)
-                
-                # Val batch predictions
-                val_pred = os.path.join(results_path, "val_batch0_pred.jpg")
+                # Val predictions
+                val_pred = os.path.join(test_results_path, "val_batch0_pred.jpg")
                 if os.path.exists(val_pred):
                     st.image(val_pred, caption="Validation Predictions", use_container_width=True)
             
-            # Tìm thêm các batch khác
-            st.markdown("---")
-            st.markdown("#### 📸 Các batch khác")
-            
-            other_batches = glob.glob(os.path.join(results_path, "val_batch*_pred.jpg"))
-            if len(other_batches) > 1:
+            # Tìm thêm val batch khác
+            other_val_batches = glob.glob(os.path.join(test_results_path, "val_batch*_pred.jpg"))
+            if len(other_val_batches) > 1:
+                st.markdown("---")
+                st.markdown("#### 📸 Các validation batch khác")
+                
                 cols = st.columns(3)
-                for idx, batch_path in enumerate(other_batches[1:]):  # Bỏ qua batch0 đã hiển thị
+                for idx, batch_path in enumerate(other_val_batches[1:6]):  # Hiển thị tối đa 5 batch
                     with cols[idx % 3]:
                         st.image(batch_path, caption=os.path.basename(batch_path), use_container_width=True)
-            else:
-                st.info("ℹ️ Không có batch validation khác")
         
-        # Tab 4: Tất cả file
-        with tab4:
+        # TAB 5: All Files
+        with tab5:
             st.subheader("📂 Tất cả file trong thư mục")
             
-            # Lấy tất cả file ảnh
-            image_files = []
-            for ext in ['*.png', '*.jpg', '*.jpeg']:
-                image_files.extend(glob.glob(os.path.join(results_path, ext)))
+            # Liệt kê tất cả file
+            all_files = []
+            for root, dirs, files in os.walk(test_results_path):
+                for file in files:
+                    all_files.append(os.path.join(root, file))
             
-            if image_files:
-                st.write(f"Tìm thấy **{len(image_files)}** file ảnh")
+            if all_files:
+                st.write(f"Tổng số file: **{len(all_files)}**")
                 
-                # Hiển thị dạng grid
-                cols = st.columns(3)
-                for idx, img_path in enumerate(sorted(image_files)):
-                    with cols[idx % 3]:
-                        st.image(img_path, caption=os.path.basename(img_path), use_container_width=True)
+                # Phân loại file
+                images = [f for f in all_files if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+                jsons = [f for f in all_files if f.lower().endswith('.json')]
+                txts = [f for f in all_files if f.lower().endswith('.txt')]
+                others = [f for f in all_files if f not in images + jsons + txts]
+                
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("🖼️ Images", len(images))
+                with col2:
+                    st.metric("📄 JSON", len(jsons))
+                with col3:
+                    st.metric("📝 TXT", len(txts))
+                with col4:
+                    st.metric("📦 Khác", len(others))
+                
+                # Hiển thị danh sách
+                with st.expander("📋 Danh sách file chi tiết", expanded=False):
+                    import pandas as pd
+                    
+                    file_data = []
+                    for f in all_files:
+                        file_data.append({
+                            'Tên': os.path.basename(f),
+                            'Đường dẫn': f,
+                            'Kích thước': f"{os.path.getsize(f)/1024:.1f} KB",
+                            'Loại': os.path.splitext(f)[1]
+                        })
+                    
+                    df = pd.DataFrame(file_data)
+                    st.dataframe(df, use_container_width=True)
+                
+                # Hiển thị tất cả ảnh
+                if images:
+                    st.markdown("---")
+                    st.markdown("#### 🖼️ Tất cả ảnh")
+                    
+                    cols = st.columns(3)
+                    for idx, img_path in enumerate(images):
+                        with cols[idx % 3]:
+                            st.image(img_path, caption=os.path.basename(img_path), use_container_width=True)
             else:
-                st.warning("⚠️ Không tìm thấy file ảnh nào")
+                st.warning("⚠️ Thư mục trống")
+        
+        # Download all
+        st.markdown("---")
+        st.markdown("### 📥 Download")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Download JSON nếu có
+            json_files = glob.glob(os.path.join(test_results_path, "*.json"))
+            if json_files:
+                with open(json_files[0], "rb") as f:
+                    st.download_button(
+                        "📄 Download JSON Results",
+                        f,
+                        os.path.basename(json_files[0]),
+                        "application/json",
+                        use_container_width=True
+                    )
+        
+        with col2:
+            # Download ZIP toàn bộ
+            import zipfile
+            import io
+            
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for root, dirs, files in os.walk(test_results_path):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.relpath(file_path, test_results_path)
+                        zip_file.write(file_path, arcname)
+            
+            st.download_button(
+                "📦 Download All (ZIP)",
+                zip_buffer.getvalue(),
+                f"{os.path.basename(test_results_path)}_results.zip",
+                "application/zip",
+                use_container_width=True
+            )
     
     else:
-        st.error(f"❌ Không tìm thấy thư mục: `{results_path}`")
+        st.error(f"❌ Không tìm thấy thư mục: `{test_results_path}`")
         
-        with st.expander("💡 Hướng dẫn", expanded=True):
-            st.markdown("""
-            ### 📖 Cách tìm thư mục kết quả:
-            
-            Sau khi train model YOLOv8, kết quả thường lưu tại:
-            ```
-            runs/detect/train/
-            runs/detect/train2/
-            runs/detect/train3/
-            ...
-            ```
-            
-            ### 📁 Cấu trúc thư mục:
-            ```
-            runs/detect/train/
-            ├── weights/
-            │   ├── best.pt
-            │   └── last.pt
-            ├── confusion_matrix.png
-            ├── confusion_matrix_normalized.png
-            ├── results.png
-            ├── PR_curve.png
-            ├── F1_curve.png
-            ├── labels.jpg
-            ├── train_batch0.jpg
-            ├── val_batch0_labels.jpg
-            └── val_batch0_pred.jpg
-            ```
-            
-            ### 🔍 Cách sử dụng:
-            1. Nhập đường dẫn thư mục vào ô input
-            2. Click "🔄 Tải lại" để refresh
-            3. Xem kết quả trong các tab
-            """)
+        st.markdown("### 💡 Hướng dẫn:")
+        st.markdown("""
+        Sau khi chạy test/validation với YOLOv8, kết quả thường lưu tại:
+        
+        ```
+        run/detect/val/          # Lần chạy đầu tiên
+        run/detect/val2/         # Lần chạy thứ 2
+        run/detect/test/         # Nếu chạy trên test set
+        ```
+        
+        **Cấu trúc thư mục kết quả:**
+        ```
+        run/detect/val/
+        ├── confusion_matrix.png
+        ├── confusion_matrix_normalized.png
+        ├── PR_curve.png
+        ├── F1_curve.png
+        ├── P_curve.png
+        ├── R_curve.png
+        ├── predictions.json
+        ├── labels.jpg
+        └── [ảnh predictions...]
+        ```
+        
+        Nhập đường dẫn chính xác vào ô trên để xem kết quả!
+        """)
 
 # Footer
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #666; padding: 1rem;'>
-    <p>🎯 Object Detection System - Nhóm 12 | Powered by YOLOv8 & Streamlit</p>
+    <p>🎯 Traffic Detection - Nhóm 12 | YOLOv8 & Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
