@@ -72,7 +72,7 @@ with st.sidebar:
         <div style="text-align: center; padding: 20px 0; background-color: #0e1a2f; border-radius: 15px; margin-bottom: 20px;">
             <img src="https://tools1s.com/images/dkmh/vaa-logo.png" width="140">
             <p style="color: white; margin: 15px 0 0 0; font-size: 1.35rem; font-weight: bold; letter-spacing: 1px;">
-                Nhóm 12 _ XỬ LÍ THỊ GIÁC
+                Nhóm 12 _ Lập trình Python
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -788,6 +788,6 @@ elif option == "🧪 Test & Validation Results":
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #666; padding: 1rem;'>
-    <p>🎯 Traffic Detection - Nhóm 12 | YOLOv8 & Streamlit</p>
+    <p>🎯 Obj detection - Nhóm 12</p>
 </div>
 """, unsafe_allow_html=True)
