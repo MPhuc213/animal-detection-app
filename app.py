@@ -368,100 +368,435 @@ elif option == "🎥 Đếm từ video":
 # -------------------------
 # VISUALIZE
 # -------------------------
-elif option == "📈 Visualize":
-    st.header("📈 Kết quả Training")
+elif option == "📈 Visualize Training Results":
+    st.header("📈 Kết quả Training Model")
+    
+    st.info("""
+    📊 **Xem kết quả training YOLO**
+    
+    Hiển thị các biểu đồ: Confusion Matrix, Curves, Predictions, và nhiều hơn nữa
+    """)
     
     col1, col2 = st.columns([3, 1])
     
     with col1:
         results_path = st.text_input(
-            "📁 Đường dẫn:",
-            value="run/detect/train",
-            help="Ví dụ: run/detect/train"
+            "📁 Đường dẫn thư mục kết quả:",
+            value="runs/detect/train",
+            help="Ví dụ: runs/detect/train, runs/detect/train2"
         )
     
     with col2:
+        st.markdown("<br>", unsafe_allow_html=True)
         refresh = st.button("🔄 Tải lại", use_container_width=True)
     
     if os.path.exists(results_path):
         st.success(f"✅ Tìm thấy: `{results_path}`")
         
-        tab1, tab2, tab3, tab4 = st.tabs(["📊 Confusion Matrix", "📉 Curves", "🎯 Predictions", "📂 All Files"])
+        # Kiểm tra file args.yaml để hiển thị thông tin training
+        args_path = os.path.join(results_path, "args.yaml")
+        if os.path.exists(args_path):
+            with st.expander("ℹ️ Thông tin Training", expanded=False):
+                try:
+                    import yaml
+                    with open(args_path, 'r') as f:
+                        args = yaml.safe_load(f)
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("Epochs", args.get('epochs', 'N/A'))
+                        st.metric("Batch Size", args.get('batch', 'N/A'))
+                    
+                    with col2:
+                        st.metric("Image Size", args.get('imgsz', 'N/A'))
+                        st.metric("Model", args.get('model', 'N/A'))
+                    
+                    with col3:
+                        st.metric("Optimizer", args.get('optimizer', 'N/A'))
+                        st.metric("LR0", args.get('lr0', 'N/A'))
+                    
+                    with col4:
+                        st.metric("Workers", args.get('workers', 'N/A'))
+                        st.metric("Device", args.get('device', 'N/A'))
+                    
+                except Exception as e:
+                    st.warning(f"⚠️ Không đọc được args.yaml: {e}")
         
+        # Tabs hiển thị kết quả
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            "📊 Confusion Matrix", 
+            "📈 Training Curves", 
+            "🎯 Predictions", 
+            "📉 Performance Metrics",
+            "📂 All Files"
+        ])
+        
+        # TAB 1: Confusion Matrix
         with tab1:
-            st.subheader("Ma trận nhầm lẫn")
+            st.subheader("🔢 Ma trận nhầm lẫn (Confusion Matrix)")
+            
+            st.markdown("""
+            Ma trận nhầm lẫn cho thấy mô hình phân loại đúng/sai như thế nào cho từng class.
+            - **Hàng**: Ground truth (nhãn thực tế)
+            - **Cột**: Predictions (dự đoán của model)
+            """)
+            
             col1, col2 = st.columns(2)
             
             with col1:
                 cm_path = os.path.join(results_path, "confusion_matrix.png")
                 if os.path.exists(cm_path):
                     st.image(cm_path, caption="Confusion Matrix", use_container_width=True)
+                    
+                    with open(cm_path, "rb") as f:
+                        st.download_button(
+                            "⬇️ Download Confusion Matrix",
+                            f,
+                            "confusion_matrix.png",
+                            "image/png",
+                            use_container_width=True
+                        )
                 else:
-                    st.warning("⚠️ Không có confusion_matrix.png")
+                    st.warning("⚠️ Không tìm thấy confusion_matrix.png")
             
             with col2:
-                cm_norm = os.path.join(results_path, "confusion_matrix_normalized.png")
-                if os.path.exists(cm_norm):
-                    st.image(cm_norm, caption="Normalized", use_container_width=True)
+                cm_norm_path = os.path.join(results_path, "confusion_matrix_normalized.png")
+                if os.path.exists(cm_norm_path):
+                    st.image(cm_norm_path, caption="Normalized Confusion Matrix", use_container_width=True)
+                    
+                    with open(cm_norm_path, "rb") as f:
+                        st.download_button(
+                            "⬇️ Download Normalized Matrix",
+                            f,
+                            "confusion_matrix_normalized.png",
+                            "image/png",
+                            use_container_width=True
+                        )
                 else:
-                    st.warning("⚠️ Không có confusion_matrix_normalized.png")
+                    st.warning("⚠️ Không tìm thấy confusion_matrix_normalized.png")
+            
+            st.info("""
+            💡 **Cách đọc:**
+            - Đường chéo chính (từ trái trên xuống phải dưới): Dự đoán đúng
+            - Các ô ngoài đường chéo: Dự đoán sai (confusion)
+            - Normalized matrix hiển thị tỷ lệ % thay vì số lượng
+            """)
         
+        # TAB 2: Training Curves
         with tab2:
+            st.subheader("📉 Đường cong Training")
+            
             results_img = os.path.join(results_path, "results.png")
             if os.path.exists(results_img):
-                st.image(results_img, caption="Training Results", use_container_width=True)
+                st.image(results_img, caption="Training & Validation Metrics", use_container_width=True)
+                
+                st.markdown("""
+                **Các metrics quan trọng:**
+                - **Box Loss**: Độ chính xác vị trí bounding box
+                - **Class Loss**: Độ chính xác phân loại
+                - **mAP50**: Mean Average Precision @ IoU 0.5
+                - **mAP50-95**: mAP trung bình từ IoU 0.5 đến 0.95
+                """)
+                
+                with open(results_img, "rb") as f:
+                    st.download_button(
+                        "⬇️ Download Results Chart",
+                        f,
+                        "training_results.png",
+                        "image/png",
+                        use_container_width=True
+                    )
             else:
-                st.warning("⚠️ Không có results.png")
+                st.warning("⚠️ Không tìm thấy results.png")
             
             st.markdown("---")
+            st.subheader("🎯 Precision & Recall Curves")
+            
             col1, col2 = st.columns(2)
             
             with col1:
                 pr_path = os.path.join(results_path, "PR_curve.png")
                 if os.path.exists(pr_path):
-                    st.image(pr_path, caption="PR Curve", use_container_width=True)
+                    st.image(pr_path, caption="Precision-Recall Curve", use_container_width=True)
+                    st.caption("**PR Curve**: Quan hệ giữa Precision và Recall")
+                else:
+                    st.info("ℹ️ Không có PR_curve.png")
+                
+                p_path = os.path.join(results_path, "P_curve.png")
+                if os.path.exists(p_path):
+                    st.image(p_path, caption="Precision Curve", use_container_width=True)
+                else:
+                    st.info("ℹ️ Không có P_curve.png")
             
             with col2:
                 f1_path = os.path.join(results_path, "F1_curve.png")
                 if os.path.exists(f1_path):
-                    st.image(f1_path, caption="F1 Curve", use_container_width=True)
+                    st.image(f1_path, caption="F1 Score Curve", use_container_width=True)
+                    st.caption("**F1 Score**: Trung bình điều hòa của Precision và Recall")
+                else:
+                    st.info("ℹ️ Không có F1_curve.png")
+                
+                r_path = os.path.join(results_path, "R_curve.png")
+                if os.path.exists(r_path):
+                    st.image(r_path, caption="Recall Curve", use_container_width=True)
+                else:
+                    st.info("ℹ️ Không có R_curve.png")
         
+        # TAB 3: Predictions
         with tab3:
+            st.subheader("🎯 Ví dụ Predictions")
+            
             col1, col2 = st.columns(2)
             
             with col1:
+                st.markdown("#### 📋 Labels Distribution")
                 labels_path = os.path.join(results_path, "labels.jpg")
                 if os.path.exists(labels_path):
-                    st.image(labels_path, caption="Labels", use_container_width=True)
+                    st.image(labels_path, caption="Phân bố nhãn trong dataset", use_container_width=True)
+                else:
+                    st.info("ℹ️ Không có labels.jpg")
                 
+                st.markdown("#### 🎓 Training Batch")
                 train_batch = os.path.join(results_path, "train_batch0.jpg")
                 if os.path.exists(train_batch):
-                    st.image(train_batch, caption="Train Batch", use_container_width=True)
+                    st.image(train_batch, caption="Ảnh training batch đầu tiên", use_container_width=True)
+                else:
+                    st.info("ℹ️ Không có train_batch0.jpg")
             
             with col2:
+                st.markdown("#### ✅ Validation Labels")
                 val_labels = os.path.join(results_path, "val_batch0_labels.jpg")
                 if os.path.exists(val_labels):
-                    st.image(val_labels, caption="Val Labels", use_container_width=True)
+                    st.image(val_labels, caption="Ground truth labels", use_container_width=True)
+                else:
+                    st.info("ℹ️ Không có val_batch0_labels.jpg")
                 
+                st.markdown("#### 🔮 Validation Predictions")
                 val_pred = os.path.join(results_path, "val_batch0_pred.jpg")
                 if os.path.exists(val_pred):
-                    st.image(val_pred, caption="Val Predictions", use_container_width=True)
-        
-        with tab4:
-            image_files = []
-            for ext in ['*.png', '*.jpg', '*.jpeg']:
-                image_files.extend(glob.glob(os.path.join(results_path, ext)))
+                    st.image(val_pred, caption="Model predictions", use_container_width=True)
+                else:
+                    st.info("ℹ️ Không có val_batch0_pred.jpg")
             
-            if image_files:
-                st.write(f"**{len(image_files)}** files")
+            # Hiển thị thêm các validation batch khác
+            st.markdown("---")
+            st.markdown("#### 📸 Các validation batch khác")
+            
+            val_batches = glob.glob(os.path.join(results_path, "val_batch*_pred.jpg"))
+            if len(val_batches) > 1:
                 cols = st.columns(3)
-                for idx, img_path in enumerate(sorted(image_files)):
+                for idx, batch_path in enumerate(val_batches[1:6]):  # Hiển thị 5 batch tiếp theo
                     with cols[idx % 3]:
-                        st.image(img_path, caption=os.path.basename(img_path), use_container_width=True)
+                        st.image(batch_path, caption=os.path.basename(batch_path), use_container_width=True)
             else:
-                st.warning("⚠️ Không có file ảnh")
+                st.info("ℹ️ Chỉ có 1 validation batch")
+        
+        # TAB 4: Performance Metrics
+        with tab4:
+            st.subheader("📊 Các metrics hiệu suất")
+            
+            # Đọc file results.csv nếu có
+            csv_path = os.path.join(results_path, "results.csv")
+            if os.path.exists(csv_path):
+                try:
+                    import pandas as pd
+                    df = pd.read_csv(csv_path)
+                    
+                    # Lấy metrics từ epoch cuối
+                    last_epoch = df.iloc[-1]
+                    
+                    st.markdown("#### 🏆 Kết quả epoch cuối cùng")
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        if 'metrics/mAP50(B)' in df.columns:
+                            st.metric("mAP@0.5", f"{last_epoch['metrics/mAP50(B)']:.3f}")
+                        if 'metrics/precision(B)' in df.columns:
+                            st.metric("Precision", f"{last_epoch['metrics/precision(B)']:.3f}")
+                    
+                    with col2:
+                        if 'metrics/mAP50-95(B)' in df.columns:
+                            st.metric("mAP@0.5:0.95", f"{last_epoch['metrics/mAP50-95(B)']:.3f}")
+                        if 'metrics/recall(B)' in df.columns:
+                            st.metric("Recall", f"{last_epoch['metrics/recall(B)']:.3f}")
+                    
+                    with col3:
+                        if 'train/box_loss' in df.columns:
+                            st.metric("Box Loss", f"{last_epoch['train/box_loss']:.4f}")
+                        if 'train/cls_loss' in df.columns:
+                            st.metric("Class Loss", f"{last_epoch['train/cls_loss']:.4f}")
+                    
+                    with col4:
+                        if 'val/box_loss' in df.columns:
+                            st.metric("Val Box Loss", f"{last_epoch['val/box_loss']:.4f}")
+                        if 'val/cls_loss' in df.columns:
+                            st.metric("Val Class Loss", f"{last_epoch['val/cls_loss']:.4f}")
+                    
+                    st.markdown("---")
+                    st.markdown("#### 📈 Lịch sử Training")
+                    
+                    # Hiển thị bảng
+                    with st.expander("📋 Xem bảng chi tiết", expanded=False):
+                        st.dataframe(df, use_container_width=True)
+                    
+                    # Download CSV
+                    csv_data = df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        "⬇️ Download Results CSV",
+                        csv_data,
+                        "training_results.csv",
+                        "text/csv",
+                        use_container_width=True
+                    )
+                    
+                except Exception as e:
+                    st.warning(f"⚠️ Không đọc được results.csv: {e}")
+            else:
+                st.info("ℹ️ Không tìm thấy results.csv")
+            
+            # Hiển thị labels correlogram
+            st.markdown("---")
+            st.markdown("#### 🔗 Labels Correlogram")
+            
+            correlogram_path = os.path.join(results_path, "labels_correlogram.jpg")
+            if os.path.exists(correlogram_path):
+                st.image(correlogram_path, caption="Mối tương quan giữa các class", use_container_width=True)
+                st.caption("Cho biết các class nào thường xuất hiện cùng nhau")
+            else:
+                st.info("ℹ️ Không có labels_correlogram.jpg")
+        
+        # TAB 5: All Files
+        with tab5:
+            st.subheader("📂 Tất cả file trong thư mục")
+            
+            # Liệt kê tất cả file
+            all_files = []
+            for root, dirs, files in os.walk(results_path):
+                for file in files:
+                    all_files.append(os.path.join(root, file))
+            
+            if all_files:
+                # Phân loại file
+                images = [f for f in all_files if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+                csvs = [f for f in all_files if f.lower().endswith('.csv')]
+                yamls = [f for f in all_files if f.lower().endswith('.yaml')]
+                pts = [f for f in all_files if f.lower().endswith('.pt')]
+                others = [f for f in all_files if f not in images + csvs + yamls + pts]
+                
+                # Metrics
+                col1, col2, col3, col4, col5 = st.columns(5)
+                
+                with col1:
+                    st.metric("🖼️ Images", len(images))
+                with col2:
+                    st.metric("📊 CSV", len(csvs))
+                with col3:
+                    st.metric("⚙️ YAML", len(yamls))
+                with col4:
+                    st.metric("🤖 Model", len(pts))
+                with col5:
+                    st.metric("📦 Khác", len(others))
+                
+                # Hiển thị danh sách file
+                with st.expander("📋 Danh sách chi tiết", expanded=False):
+                    import pandas as pd
+                    
+                    file_data = []
+                    for f in all_files:
+                        file_size = os.path.getsize(f)
+                        size_mb = file_size / (1024 * 1024)
+                        
+                        file_data.append({
+                            'Tên': os.path.basename(f),
+                            'Đường dẫn': f,
+                            'Kích thước': f"{size_mb:.2f} MB" if size_mb >= 1 else f"{file_size/1024:.1f} KB",
+                            'Loại': os.path.splitext(f)[1]
+                        })
+                    
+                    df = pd.DataFrame(file_data)
+                    st.dataframe(df, use_container_width=True, height=400)
+                
+                # Hiển thị tất cả ảnh
+                if images:
+                    st.markdown("---")
+                    st.markdown("#### 🖼️ Tất cả ảnh trong thư mục")
+                    
+                    # Tùy chọn số cột
+                    num_cols = st.slider("Số cột hiển thị:", 2, 5, 3)
+                    
+                    cols = st.columns(num_cols)
+                    for idx, img_path in enumerate(sorted(images)):
+                        with cols[idx % num_cols]:
+                            st.image(img_path, caption=os.path.basename(img_path), use_container_width=True)
+                            
+                            # Hiển thị size
+                            file_size = os.path.getsize(img_path) / 1024
+                            st.caption(f"📦 {file_size:.1f} KB")
+                
+                # Download all as ZIP
+                st.markdown("---")
+                st.markdown("### 📥 Download toàn bộ")
+                
+                if st.button("📦 Tạo file ZIP", use_container_width=True):
+                    import zipfile
+                    import io
+                    
+                    with st.spinner("Đang nén file..."):
+                        zip_buffer = io.BytesIO()
+                        
+                        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                            for file_path in all_files:
+                                arcname = os.path.relpath(file_path, results_path)
+                                zip_file.write(file_path, arcname)
+                        
+                        st.download_button(
+                            "⬇️ Download ZIP",
+                            zip_buffer.getvalue(),
+                            f"{os.path.basename(results_path)}_results.zip",
+                            "application/zip",
+                            use_container_width=True
+                        )
+                        
+                        st.success(f"✅ Đã tạo file ZIP với {len(all_files)} files")
+            else:
+                st.warning("⚠️ Thư mục trống")
+                
     else:
-        st.error(f"❌ Không tìm thấy: `{results_path}`")
+        st.error(f"❌ Không tìm thấy thư mục: `{results_path}`")
+        
+        st.markdown("---")
+        st.markdown("### 💡 Hướng dẫn:")
+        st.markdown("""
+        Sau khi training YOLO, kết quả thường được lưu tại:
+        
+        ```
+        runs/detect/train/          # Lần train đầu tiên
+        runs/detect/train2/         # Lần train thứ 2
+        runs/detect/train3/         # Lần train thứ 3
+        ...
+        ```
+        
+        **Cấu trúc thư mục kết quả:**
+        ```
+        runs/detect/train/
+        ├── weights/
+        │   ├── best.pt           # Model tốt nhất
+        │   └── last.pt           # Model epoch cuối
+        ├── confusion_matrix.png
+        ├── results.png
+        ├── PR_curve.png
+        ├── F1_curve.png
+        ├── results.csv
+        ├── args.yaml
+        └── [các file khác...]
+        ```
+        
+        📝 **Nhập đường dẫn chính xác vào ô trên để xem kết quả!**
+        """)
+
+
 
 
 
