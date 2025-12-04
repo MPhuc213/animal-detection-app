@@ -135,11 +135,11 @@ with st.sidebar:
     with st.expander("👥 Thành viên nhóm", expanded=False):
         st.markdown("""
         <div style='color: white;'>
-        • Trần Kim Minh (Lead)<br>
+        • Trần Thanh Đạt(Lead)<br>
         • Nguyễn Minh Phúc (Thành Viên)<br>
-        • Vũ Thị Kim Loan (Thành Viên)<br>
-        • Huỳnh Chí Danh (Thành Viên)<br>
-        • Nguyễn Triệu Thiên Anh (Thành Viên)
+        • Trần Thanh Trúc (Thành Viên)<br>
+        • Đồng Đức Mạnh (Thành Viên)<br>
+        • Nguyễn Trần Duy Khánh (Thành Viên)
         </div>
         """, unsafe_allow_html=True)
     
@@ -149,9 +149,9 @@ with st.sidebar:
         <b>🖼️ Đếm từ ảnh:</b><br>
         Upload ảnh để Đếm vật thể<br><br>
         <b>🎥 Đếm từ video:</b><br>
-        Upload video để Đếm và đếm xe<br><br>
+        Upload video để Đếm và đếm vật thể<br><br>
         <b>📈 Visualize:</b><br>
-        Xem kết quả training model
+        vật thểm kết quả training model
         </div>
         """, unsafe_allow_html=True)
 
@@ -249,7 +249,7 @@ if option == "🖼️ Đếm từ ảnh":
                                 st.metric(str(name).capitalize(), count)
                         st.bar_chart(class_count)
                 else:
-                    st.warning("⚠️ Không Đếm được xe")
+                    st.warning("⚠️ Không Đếm được vật thể")
                 
                 st.markdown("---")
                 
@@ -350,7 +350,7 @@ elif option == "🎥 Đếm từ video":
                             df = pd.DataFrame(list(class_count.items()), columns=['Class', 'Count'])
                             st.bar_chart(df.set_index('Class'))
                 else:
-                    st.warning("⚠️ Không đếm được xe")
+                    st.warning("⚠️ Không đếm được vật thể")
                 
                 if os.path.exists(temp_input):
                     os.remove(temp_input)
@@ -368,7 +368,7 @@ elif option == "🎥 Đếm từ video":
 # -------------------------
 # VISUALIZE
 # -------------------------
-elif option == "📈 Visualize Training Results":
+elif option == "📈 Visualize":
     st.header("📈 Kết quả Training")
     
     col1, col2 = st.columns([3, 1])

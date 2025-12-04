@@ -6,9 +6,7 @@ import os
 
 
 def process_video_with_preview(video_path, output_path="output.mp4", show_preview=True, conf=0.25, iou=0.45, model_path="models/best.pt", use_tracking=True):
-    """
-    Xử lý video với tracking và preview
-    """
+
     model = YOLO(model_path)
     
     cap = cv2.VideoCapture(video_path)
@@ -20,28 +18,25 @@ def process_video_with_preview(video_path, output_path="output.mp4", show_previe
     
     if fps <= 0 or fps > 120:
         fps = 30.0
-    
-    # ĐỔI CODEC: Dùng H264 thay vì mp4v
-    # Thử các codec khác nhau để tương thích với browser
+
     try:
-        # Codec 1: H264 (tốt nhất cho web)
         fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H264
         out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
         
-        # Kiểm tra có mở được không
+
         if not out.isOpened():
             raise Exception("avc1 failed")
             
     except:
         try:
-            # Codec 2: MP4V (backup)
+
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
             
             if not out.isOpened():
                 raise Exception("mp4v failed")
         except:
-            # Codec 3: XVID (fallback cuối)
+ 
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
             output_path = output_path.replace('.mp4', '.avi')
             out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
