@@ -86,7 +86,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
     # CHỌN MODEL
-    st.markdown("<p style='color: white; font-weight: bold; font-size: 1.1rem; margin-top: 1rem;'>🤖 CHỌN MODEL</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: white; font-weight: bold; font-size: 1.1rem; margin-top: 1rem;'> CHỌN MODEL</p>", unsafe_allow_html=True)
     
     model_folder = "models"
     if os.path.exists(model_folder):
@@ -125,7 +125,7 @@ with st.sidebar:
     
     option = st.selectbox(
         "Chọn chức năng:",
-        ["🖼️ Đếm từ ảnh", "🎥 Đếm từ video", "📈 Visualize Training Results", "🧪 Test & Validation Results"],
+        ["🖼️ Đếm từ ảnh", "🎥 Đếm từ video", "📈 Visualize Training Results"],
         label_visibility="collapsed"
     )
     
